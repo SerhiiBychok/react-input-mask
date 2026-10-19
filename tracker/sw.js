@@ -1,6 +1,6 @@
 /* Service worker: робить застосунок доступним офлайн.
    При зміні файлів збільшуйте номер версії кешу. */
-const CACHE = 'symptom-tracker-v1';
+const CACHE = 'symptom-tracker-v2';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
