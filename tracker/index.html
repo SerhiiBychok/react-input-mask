@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Самопочуття</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Особистий трекер самопочуття: відмічайте біль чи звички в моменті та дивіться, коли це було востаннє.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Самопочуття">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<style>
+  :root {
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --card-2: #f7f7fa;
+    --text: #1c1c1e;
+    --muted: #6e6e73;
+    --line: rgba(60, 60, 67, 0.14);
+    --accent: #c23b9e;
+    --danger: #e5484d;
+    --toast: #2c2c2e;
+    --tab-bg: rgba(249, 249, 249, 0.92);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.05);
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --card-2: #2c2c2e;
+      --text: #f2f2f7;
+      --muted: #98989e;
+      --line: rgba(84, 84, 88, 0.55);
+      --toast: #3a3a3c;
+      --tab-bg: rgba(22, 22, 24, 0.92);
+      --shadow: none;
+    }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 17px;
+    line-height: 1.3;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior-y: none;
+  }
+  input, textarea, select { -webkit-user-select: text; user-select: text; font-family: inherit; }
+  button { font-family: inherit; }
+
+  .header {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg);
+    padding: calc(env(safe-area-inset-top) + 12px) 16px 10px;
+  }
+  .header h1 { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.4px; }
+  .header .sub { color: var(--muted); font-size: 15px; margin-top: 2px; }
+
+  .view { display: none; padding: 4px 16px 0; }
+  .view.active { display: block; }
+
+  /* ---- "Зараз" ---- */
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .card {
+    appearance: none; border: 0; margin: 0;
+    display: flex; flex-direction: column; align-items: flex-start; text-align: left;
+    gap: 2px; width: 100%; min-height: 148px;
+    padding: 14px 14px 12px;
+    background: var(--card); color: var(--text);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    border-top: 4px solid var(--c, var(--accent));
+    transition: transform 0.12s ease, background 0.12s ease;
+    cursor: pointer;
+  }
+  .card:active { transform: scale(0.96); background: var(--card-2); }
+  .card-top { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 14px; font-size: 24px; line-height: 1;
+    background: color-mix(in srgb, var(--c, var(--accent)) 16%, transparent);
+  }
+  @supports not (background: color-mix(in srgb, red 10%, transparent)) {
+    .badge { background: var(--card-2); }
+  }
+  .card-count { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--card-2); padding: 3px 8px; border-radius: 999px; }
+  .card-name { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+  .card-last { font-size: 15px; font-weight: 500; color: var(--c, var(--accent)); margin-top: auto; }
+  .card-abs { font-size: 13px; color: var(--muted); }
+  .card-add {
+    background: transparent; box-shadow: none; border: 2px dashed var(--line); border-top-width: 2px;
+    align-items: center; justify-content: center; color: var(--muted); font-size: 16px; font-weight: 500;
+  }
+  .card-add:active { background: var(--card-2); }
+  .hint { color: var(--muted); font-size: 13px; text-align: center; margin: 14px 0 0; }
+
+  .section-title { font-size: 20px; font-weight: 700; margin: 26px 0 10px; letter-spacing: -0.2px; }
+
+  /* ---- списки ---- */
+  .list { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .row {
+    appearance: none; border: 0; margin: 0; width: 100%; background: transparent; color: var(--text);
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px; text-align: left; font-size: 17px;
+    cursor: pointer;
+  }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row:active { background: var(--card-2); }
+  .row .badge { width: 38px; height: 38px; border-radius: 11px; font-size: 20px; flex: none; }
+  .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .row-name { font-weight: 500; overflow-wrap: anywhere; }
+  .row-note { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+  .row-time { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; flex: none; }
+  .row-chev { color: var(--muted); font-size: 22px; line-height: 1; flex: none; opacity: 0.6; }
+  .row.static { cursor: default; }
+  .row.static:active { background: transparent; }
+
+  .group { margin-bottom: 18px; }
+  .group-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin: 0 0 6px 14px; }
+
+  .empty { color: var(--muted); text-align: center; padding: 40px 20px; font-size: 15px; }
+  .empty .big { font-size: 40px; margin-bottom: 10px; }
+
+  /* ---- фільтри ---- */
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    appearance: none; border: 0; flex: none;
+    background: var(--card); color: var(--text); font-size: 15px; font-weight: 500;
+    padding: 8px 14px; border-radius: 999px; box-shadow: var(--shadow); cursor: pointer;
+  }
+  .chip.active { background: var(--accent); color: #fff; }
+
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .summary > div { background: var(--card); border-radius: 14px; padding: 10px 8px; text-align: center; box-shadow: var(--shadow); }
+  .summary b { display: block; font-size: 24px; font-weight: 700; letter-spacing: -0.3px; }
+  .summary span { font-size: 12px; color: var(--muted); }
+  .summary-last { grid-column: 1 / -1; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .summary-last b { font-size: 16px; display: inline; }
+  .summary-last span { font-size: 14px; }
+
+  /* ---- категорії ---- */
+  .btn-block {
+    appearance: none; border: 0; width: 100%; margin-top: 12px;
+    background: var(--card); color: var(--accent); font-size: 17px; font-weight: 600;
+    padding: 14px; border-radius: 14px; box-shadow: var(--shadow); cursor: pointer;
+  }
+  .btn-block:active { background: var(--card-2); }
+  .btn-block.danger { color: var(--danger); }
+  .foot { color: var(--muted); font-size: 13px; margin: 10px 14px 0; }
+
+  /* ---- sheet ---- */
+  #modal[hidden] { display: none; }
+  .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 20; opacity: 0; transition: opacity 0.22s ease; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+    background: var(--card); color: var(--text);
+    border-radius: 22px 22px 0 0;
+    padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 90vh; max-height: 90dvh; overflow-y: auto;
+    transform: translateY(100%); transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  #modal.in .backdrop { opacity: 1; }
+  #modal.in .sheet { transform: none; }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 12px; }
+  .sheet-title { font-size: 20px; font-weight: 700; margin: 4px 0 14px; letter-spacing: -0.2px; }
+  .sheet-text { color: var(--muted); font-size: 15px; margin: -6px 0 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 6px 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .field input[type="text"], .field input[type="datetime-local"], .field textarea, .field select {
+    width: 100%; font-size: 17px; padding: 12px 12px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--card-2); color: var(--text); outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+  .field textarea { min-height: 72px; resize: vertical; }
+  .field input[type="datetime-local"] { min-height: 46px; }
+  .emoji-row { display: flex; gap: 8px; align-items: center; }
+  .emoji-row input { width: 72px !important; text-align: center; font-size: 24px !important; padding: 6px !important; }
+  .emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .emoji-grid button {
+    appearance: none; border: 0; width: 40px; height: 40px; border-radius: 10px; font-size: 22px;
+    background: var(--card-2); cursor: pointer;
+  }
+  .emoji-grid button.active { outline: 2px solid var(--accent); }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .swatch { appearance: none; border: 0; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; position: relative; }
+  .swatch.active::after { content: ""; position: absolute; inset: -5px; border: 2px solid var(--text); border-radius: 50%; }
+  .btn-row { display: flex; gap: 10px; margin-top: 6px; }
+  .btn {
+    appearance: none; border: 0; flex: 1; padding: 14px; border-radius: 14px;
+    font-size: 17px; font-weight: 600; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.secondary { background: var(--card-2); color: var(--text); }
+  .btn.danger { background: var(--danger); color: #fff; }
+  .btn.ghost-danger { background: transparent; color: var(--danger); }
+  .btn:active { opacity: 0.8; }
+  .order-row { display: flex; gap: 10px; margin: -4px 0 14px; }
+  .order-row .btn { padding: 10px; font-size: 15px; font-weight: 500; }
+
+  /* ---- toast ---- */
+  .toast {
+    position: fixed; left: 16px; right: 16px; z-index: 15;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    background: var(--toast); color: #fff;
+    border-radius: 14px; padding: 12px 10px 12px 14px;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transform: translateY(16px); opacity: 0; pointer-events: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .toast.show { transform: none; opacity: 1; pointer-events: auto; }
+  .toast .t-text { flex: 1; font-size: 15px; overflow-wrap: anywhere; }
+  .toast button { appearance: none; background: transparent; border: 0; color: #fff; font-weight: 600; font-size: 15px; padding: 8px; border-radius: 8px; cursor: pointer; }
+  .toast button.accent { color: #ff9ad5; }
+
+  /* ---- підказка встановлення ---- */
+  .install {
+    background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px;
+    display: flex; gap: 10px; align-items: flex-start; font-size: 14px; box-shadow: var(--shadow);
+  }
+  .install .t { flex: 1; }
+  .install b { display: block; margin-bottom: 2px; }
+  .install button { appearance: none; border: 0; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; padding: 0 2px; cursor: pointer; }
+
+  /* ---- tab bar ---- */
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    display: flex; background: var(--tab-bg);
+    -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab {
+    appearance: none; border: 0; background: transparent; flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 0 6px; color: var(--muted); font-size: 11px; font-weight: 500; cursor: pointer;
+  }
+  .tab.active { color: var(--accent); }
+  .tab svg { width: 26px; height: 26px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1 id="title">Зараз</h1>
+  <div class="sub" id="subtitle"></div>
+</header>
+
+<main>
+  <section class="view active" id="view-now">
+    <div id="install-hint"></div>
+    <div class="grid" id="grid"></div>
+    <p class="hint">Торкніться картки, щоб записати «зараз». Час можна змінити одразу після запису або в історії.</p>
+    <h2 class="section-title">Сьогодні</h2>
+    <div id="today"></div>
+  </section>
+
+  <section class="view" id="view-history">
+    <div class="chips" id="chips"></div>
+    <div id="summary"></div>
+    <div id="history"></div>
+  </section>
+
+  <section class="view" id="view-cats">
+    <div class="list" id="cat-list"></div>
+    <button class="btn-block" id="add-cat">＋ Додати категорію</button>
+
+    <h2 class="section-title">Дані</h2>
+    <button class="btn-block" id="export" style="margin-top:0">Експортувати (резервна копія)</button>
+    <button class="btn-block" id="import">Імпортувати з файлу</button>
+    <input type="file" id="import-file" accept="application/json,.json" hidden>
+    <button class="btn-block danger" id="clear">Видалити всі записи</button>
+    <p class="foot">Усі дані зберігаються лише на цьому телефоні. Час від часу робіть експорт, щоб мати резервну копію.</p>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-tab="now">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+    Зараз
+  </button>
+  <button class="tab" data-tab="history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    Історія
+  </button>
+  <button class="tab" data-tab="cats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+    Категорії
+  </button>
+</nav>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="modal" hidden>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'symptom-tracker.v1';
+  const HINT_KEY = 'symptom-tracker.hint-dismissed';
+  const DAY = 86400000;
+
+  const DEFAULT_CATEGORIES = [
+    { id: 'headache',   name: 'Головний біль', emoji: '🤕', color: '#e5484d' },
+    { id: 'knee-left',  name: 'Коліно ліве',   emoji: '🦵', color: '#f76b15' },
+    { id: 'knee-right', name: 'Коліно праве',  emoji: '🦵', color: '#ffb224' },
+    { id: 'sugar',      name: 'Цукор',         emoji: '🍬', color: '#8e4ec6' },
+  ];
+  const COLORS = ['#e5484d', '#f76b15', '#ffb224', '#30a46c', '#12a594', '#0090ff', '#6e56cf', '#8e4ec6', '#d6409f', '#8d8d8d'];
+  const EMOJI = ['🤕', '🦵', '🍬', '🤒', '🤧', '😴', '🤢', '😣', '🦷', '👁️', '👂', '🫀', '🫁', '🧠', '🩹', '💊', '🌡️', '💧', '☕', '🍺', '🍷', '🚬', '🍫', '🍕', '🥤', '🏃', '🚶', '🏋️', '🧘', '💤', '😤', '🤯', '🥴', '⚡', '❤️', '🦶', '🤲', '🧴', '🍽️', '📌'];
+
+  const MONTHS_GEN  = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+  const MONTHS_SHRT = ['січ.', 'лют.', 'бер.', 'квіт.', 'трав.', 'черв.', 'лип.', 'серп.', 'вер.', 'жовт.', 'лист.', 'груд.'];
+  const WEEKDAYS    = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота'];
+  const WEEKDAYS_SH = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+  const pad = (n) => String(n).padStart(2, '0');
+
+  // ---------- дати ----------
+  function plural(n, one, few, many) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+  }
+  const fmtTime = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const startOfDay = (ts) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const dayDiff = (ts, now) => Math.round((startOfDay(now) - startOfDay(ts)) / DAY);
+
+  function relLabel(ts, now) {
+    const min = Math.floor(Math.max(0, now - ts) / 60000);
+    if (min < 1) return 'щойно';
+    if (min < 60) return `${min} хв тому`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `${h} год тому`;
+    const days = dayDiff(ts, now);
+    if (days <= 1) return 'вчора';
+    if (days < 7) return `${days} ${plural(days, 'день', 'дні', 'днів')} тому`;
+    if (days < 30) { const w = Math.floor(days / 7); return `${w} ${plural(w, 'тиждень', 'тижні', 'тижнів')} тому`; }
+    if (days < 365) { const m = Math.floor(days / 30); return `${m} ${plural(m, 'місяць', 'місяці', 'місяців')} тому`; }
+    const y = Math.floor(days / 365); return `${y} ${plural(y, 'рік', 'роки', 'років')} тому`;
+  }
+  function whenLabel(ts, now) {
+    const days = dayDiff(ts, now), t = fmtTime(ts);
+    if (days === 0) return `сьогодні, ${t}`;
+    if (days === 1) return `вчора, ${t}`;
+    const d = new Date(ts);
+    const year = d.getFullYear() !== new Date(now).getFullYear() ? ` ${d.getFullYear()}` : '';
+    return `${WEEKDAYS_SH[d.getDay()]}, ${d.getDate()} ${MONTHS_SHRT[d.getMonth()]}${year}, ${t}`;
+  }
+  function dayLabel(dayTs, now) {
+    const days = dayDiff(dayTs, now);
+    if (days === 0) return 'Сьогодні';
+    if (days === 1) return 'Вчора';
+    const d = new Date(dayTs);
+    const year = d.getFullYear() !== new Date(now).getFullYear() ? ` ${d.getFullYear()}` : '';
+    return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${year}`;
+  }
+  function toLocalInput(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function fromLocalInput(v) { const t = new Date(v).getTime(); return Number.isFinite(t) ? t : null; }
+
+  // ---------- дані ----------
+  let state = load();
+  let tab = 'now';
+  let historyFilter = 'all';
+
+  function normalize(data) {
+    const cats = (data.categories || [])
+      .filter((c) => c && c.id && c.name)
+      .map((c) => ({ id: String(c.id), name: String(c.name).slice(0, 40), emoji: c.emoji ? String(c.emoji).slice(0, 12) : '•', color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : COLORS[0] }));
+    const ids = new Set(cats.map((c) => c.id));
+    const events = (data.events || [])
+      .filter((e) => e && e.id && ids.has(e.catId) && Number.isFinite(e.ts))
+      .map((e) => ({ id: String(e.id), catId: String(e.catId), ts: Number(e.ts), note: e.note ? String(e.note).slice(0, 300) : '' }));
+    return { categories: cats, events };
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data && Array.isArray(data.categories)) return normalize(data);
+      }
+    } catch (e) { console.warn('Не вдалося прочитати дані', e); }
+    return { categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })), events: [] };
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch (e) { showToast({ text: 'Не вдалося зберегти дані на пристрої' }); }
+  }
+  const catById = (id) => state.categories.find((c) => c.id === id);
+  const sortedEvents = () => state.events.slice().sort((a, b) => b.ts - a.ts);
+  const eventsFor = (catId) => sortedEvents().filter((e) => e.catId === catId);
+  const eventById = (id) => state.events.find((e) => e.id === id);
+
+  function logNow(catId) {
+    const cat = catById(catId);
+    if (!cat) return;
+    const ev = { id: uid(), catId, ts: Date.now(), note: '' };
+    state.events.push(ev);
+    save(); renderAll();
+    showToast({
+      text: `${cat.emoji} ${cat.name} — записано ${fmtTime(ev.ts)}`,
+      actions: [
+        { label: 'Змінити', onClick: () => openEventSheet(ev.id) },
+        { label: 'Скасувати', accent: true, onClick: () => { removeEvent(ev.id); showToast({ text: 'Запис скасовано' }); } },
+      ],
+    });
+  }
+  function removeEvent(id) {
+    state.events = state.events.filter((e) => e.id !== id);
+    save(); renderAll();
+  }
+
+  // ---------- рендер ----------
+  function renderAll() { renderHeader(); renderNow(); renderHistory(); renderCategories(); }
+
+  function renderHeader() {
+    const now = new Date();
+    const titles = { now: 'Зараз', history: 'Історія', cats: 'Категорії' };
+    $('#title').textContent = titles[tab];
+    const subs = {
+      now: `${WEEKDAYS[now.getDay()]}, ${now.getDate()} ${MONTHS_GEN[now.getMonth()]}`,
+      history: state.events.length ? `${state.events.length} ${plural(state.events.length, 'запис', 'записи', 'записів')}` : 'Поки що порожньо',
+      cats: 'Що відстежуємо',
+    };
+    $('#subtitle').textContent = subs[tab];
+  }
+
+  function renderNow() {
+    const now = Date.now();
+    const cards = state.categories.map((cat) => {
+      const evs = eventsFor(cat.id);
+      const last = evs[0];
+      const week = evs.filter((e) => now - e.ts < 7 * DAY).length;
+      return `<button class="card" data-id="${esc(cat.id)}" style="--c:${esc(cat.color)}" aria-label="Записати: ${esc(cat.name)}">
+        <span class="card-top"><span class="badge">${esc(cat.emoji)}</span>${week ? `<span class="card-count">${week} за 7 дн.</span>` : ''}</span>
+        <span class="card-name">${esc(cat.name)}</span>
+        <span class="card-last">${last ? esc(relLabel(last.ts, now)) : 'ще не було'}</span>
+        <span class="card-abs">${last ? esc(whenLabel(last.ts, now)) : 'торкніться, щоб записати'}</span>
+      </button>`;
+    });
+    cards.push(`<button class="card card-add" id="add-cat-card">＋ Категорія</button>`);
+    $('#grid').innerHTML = cards.join('');
+
+    const today = sortedEvents().filter((e) => dayDiff(e.ts, now) === 0);
+    $('#today').innerHTML = today.length
+      ? `<div class="list">${today.map((e) => rowHtml(e)).join('')}</div>`
+      : `<div class="empty" style="padding:18px">Сьогодні ще нічого не записано</div>`;
+  }
+
+  function rowHtml(e) {
+    const cat = catById(e.catId);
+    return `<button class="row" data-event="${esc(e.id)}">
+      <span class="badge" style="--c:${esc(cat.color)}">${esc(cat.emoji)}</span>
+      <span class="row-main"><span class="row-name">${esc(cat.name)}</span>${e.note ? `<span class="row-note">${esc(e.note)}</span>` : ''}</span>
+      <span class="row-time">${fmtTime(e.ts)}</span>
+    </button>`;
+  }
+
+  function renderHistory() {
+    const now = Date.now();
+    if (historyFilter !== 'all' && !catById(historyFilter)) historyFilter = 'all';
+    const chips = [{ id: 'all', name: 'Усі', emoji: '' }, ...state.categories];
+    $('#chips').innerHTML = chips.map((c) =>
+      `<button class="chip ${historyFilter === c.id ? 'active' : ''}" data-filter="${esc(c.id)}">${c.emoji ? esc(c.emoji) + ' ' : ''}${esc(c.name)}</button>`
+    ).join('');
+
+    let evs = sortedEvents();
+    if (historyFilter !== 'all') {
+      evs = evs.filter((e) => e.catId === historyFilter);
+      const last = evs[0];
+      const n7 = evs.filter((e) => now - e.ts < 7 * DAY).length;
+      const n30 = evs.filter((e) => now - e.ts < 30 * DAY).length;
+      $('#summary').innerHTML = `<div class="summary">
+        <div><b>${evs.length}</b><span>усього</span></div>
+        <div><b>${n7}</b><span>за 7 днів</span></div>
+        <div><b>${n30}</b><span>за 30 днів</span></div>
+        <div class="summary-last"><span>Востаннє</span><b>${last ? esc(relLabel(last.ts, now)) + ' · ' + esc(whenLabel(last.ts, now)) : 'ще не було'}</b></div>
+      </div>`;
+    } else {
+      $('#summary').innerHTML = '';
+    }
+
+    const groups = [];
+    let cur = null;
+    for (const e of evs) {
+      const day = startOfDay(e.ts);
+      if (!cur || cur.day !== day) { cur = { day, items: [] }; groups.push(cur); }
+      cur.items.push(e);
+    }
+    $('#history').innerHTML = groups.length
+      ? groups.map((g) => `<div class="group"><div class="group-title">${esc(dayLabel(g.day, now))}</div><div class="list">${g.items.map((e) => rowHtml(e)).join('')}</div></div>`).join('')
+      : `<div class="empty"><div class="big">🗓️</div>Ще немає записів.<br>Торкніться категорії на екрані «Зараз».</div>`;
+  }
+
+  function renderCategories() {
+    $('#cat-list').innerHTML = state.categories.map((c) => {
+      const n = state.events.filter((e) => e.catId === c.id).length;
+      return `<button class="row" data-cat="${esc(c.id)}">
+        <span class="badge" style="--c:${esc(c.color)}">${esc(c.emoji)}</span>
+        <span class="row-main"><span class="row-name">${esc(c.name)}</span><span class="row-note">${n ? `${n} ${plural(n, 'запис', 'записи', 'записів')}` : 'немає записів'}</span></span>
+        <span class="row-chev">›</span>
+      </button>`;
+    }).join('') || `<div class="empty" style="padding:18px">Категорій немає — додайте першу</div>`;
+  }
+
+  function renderInstallHint() {
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    let dismissed = false;
+    try { dismissed = !!localStorage.getItem(HINT_KEY); } catch (e) {}
+    if (!isIOS || standalone || dismissed) { $('#install-hint').innerHTML = ''; return; }
+    $('#install-hint').innerHTML = `<div class="install"><div class="t"><b>Додайте на головний екран</b>Натисніть «Поділитися» внизу Safari → «На Початковий екран». Тоді застосунок відкриватиметься як звичайний, без адресного рядка.</div><button id="hint-close" aria-label="Закрити">×</button></div>`;
+  }
+
+  // ---------- toast ----------
+  let toastTimer = null;
+  function showToast({ text, actions = [], duration = 6000 }) {
+    const el = $('#toast');
+    el.innerHTML = `<span class="t-text">${esc(text)}</span>` + actions.map((a, i) => `<button data-i="${i}" class="${a.accent ? 'accent' : ''}">${esc(a.label)}</button>`).join('');
+    el.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { hideToast(); actions[+b.dataset.i].onClick(); }));
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, duration);
+  }
+  function hideToast() { clearTimeout(toastTimer); $('#toast').classList.remove('show'); }
+
+  // ---------- sheet ----------
+  const modal = $('#modal'), sheet = $('#sheet');
+  let onDismiss = null;
+  function openSheet(html) {
+    onDismiss = null;
+    sheet.innerHTML = `<div class="grabber"></div>` + html;
+    modal.hidden = false;
+    sheet.scrollTop = 0; // скидати лише після показу: на display:none це не спрацьовує
+    requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('in')));
+  }
+  function closeSheet() {
+    if (modal.hidden) return;
+    modal.classList.remove('in');
+    const cb = onDismiss; onDismiss = null;
+    setTimeout(() => { modal.hidden = true; sheet.innerHTML = ''; }, 260);
+    if (cb) cb();
+  }
+  $('#backdrop').addEventListener('click', closeSheet);
+
+  function confirmSheet({ title, text, ok = 'Так', danger = false }) {
+    return new Promise((resolve) => {
+      openSheet(`<div class="sheet-title">${esc(title)}</div>${text ? `<p class="sheet-text">${esc(text)}</p>` : ''}
+        <div class="btn-row"><button class="btn secondary" data-act="cancel">Скасувати</button><button class="btn ${danger ? 'danger' : 'primary'}" data-act="ok">${esc(ok)}</button></div>`);
+      onDismiss = () => resolve(false);
+      sheet.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => { onDismiss = null; closeSheet(); resolve(b.dataset.act === 'ok'); }));
+    });
+  }
+
+  function openCategorySheet(id) {
+    const existing = id ? catById(id) : null;
+    const draft = existing ? { ...existing } : { name: '', emoji: EMOJI[0], color: COLORS[state.categories.length % COLORS.length] };
+    const idx = existing ? state.categories.indexOf(existing) : -1;
+    openSheet(`<div class="sheet-title">${existing ? 'Редагувати категорію' : 'Нова категорія'}</div>
+      <div class="field"><label for="f-name">Назва</label><input type="text" id="f-name" maxlength="40" placeholder="Наприклад, Спина" value="${esc(draft.name)}" autocomplete="off"></div>
+      <div class="field"><label for="f-emoji">Значок</label>
+        <div class="emoji-row"><input type="text" id="f-emoji" maxlength="12" value="${esc(draft.emoji)}" autocomplete="off"><span style="color:var(--muted);font-size:14px">Виберіть нижче або введіть свій</span></div>
+        <div class="emoji-grid" id="f-emoji-grid">${EMOJI.map((e) => `<button type="button" data-emoji="${esc(e)}" class="${e === draft.emoji ? 'active' : ''}">${esc(e)}</button>`).join('')}</div>
+      </div>
+      <div class="field"><label>Колір</label><div class="swatches" id="f-colors">${COLORS.map((c) => `<button type="button" class="swatch ${c === draft.color ? 'active' : ''}" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>
+      ${existing && state.categories.length > 1 ? `<div class="order-row">
+        <button type="button" class="btn secondary" data-move="-1" ${idx === 0 ? 'disabled' : ''}>↑ Вище у списку</button>
+        <button type="button" class="btn secondary" data-move="1" ${idx === state.categories.length - 1 ? 'disabled' : ''}>↓ Нижче у списку</button>
+      </div>` : ''}
+      <div class="btn-row"><button type="button" class="btn secondary" data-act="cancel">Скасувати</button><button type="button" class="btn primary" data-act="save">Зберегти</button></div>
+      ${existing ? `<div class="btn-row"><button type="button" class="btn ghost-danger" data-act="delete">Видалити категорію</button></div>` : ''}`);
+
+    const nameEl = $('#f-name'), emojiEl = $('#f-emoji');
+    $('#f-emoji-grid').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-emoji]'); if (!b) return;
+      emojiEl.value = b.dataset.emoji;
+      $('#f-emoji-grid').querySelectorAll('button').forEach((x) => x.classList.toggle('active', x === b));
+    });
+    $('#f-colors').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-color]'); if (!b) return;
+      draft.color = b.dataset.color;
+      $('#f-colors').querySelectorAll('.swatch').forEach((x) => x.classList.toggle('active', x === b));
+    });
+    sheet.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', () => {
+      const from = state.categories.indexOf(existing), to = from + Number(b.dataset.move);
+      if (to < 0 || to >= state.categories.length) return;
+      state.categories.splice(from, 1); state.categories.splice(to, 0, existing);
+      save(); renderAll(); closeSheet(); openCategorySheet(existing.id);
+    }));
+    sheet.querySelector('[data-act="cancel"]').addEventListener('click', closeSheet);
+    sheet.querySelector('[data-act="save"]').addEventListener('click', () => {
+      const name = nameEl.value.trim();
+      if (!name) { nameEl.focus(); nameEl.style.borderColor = 'var(--danger)'; return; }
+      const emoji = emojiEl.value.trim() || '•';
+      if (existing) Object.assign(existing, { name, emoji, color: draft.color });
+      else state.categories.push({ id: uid(), name, emoji, color: draft.color });
+      save(); renderAll(); closeSheet();
+      showToast({ text: existing ? 'Категорію оновлено' : `Додано «${name}»`, duration: 3000 });
+    });
+    const del = sheet.querySelector('[data-act="delete"]');
+    if (del) del.addEventListener('click', async () => {
+      const n = state.events.filter((e) => e.catId === existing.id).length;
+      closeSheet();
+      const ok = await confirmSheet({ title: `Видалити «${existing.name}»?`, text: n ? `Разом з нею буде видалено ${n} ${plural(n, 'запис', 'записи', 'записів')}. Це незворотно.` : 'Це незворотно.', ok: 'Видалити', danger: true });
+      if (!ok) { openCategorySheet(existing.id); return; }
+      state.categories = state.categories.filter((c) => c.id !== existing.id);
+      state.events = state.events.filter((e) => e.catId !== existing.id);
+      save(); renderAll();
+      showToast({ text: 'Категорію видалено', duration: 3000 });
+    });
+    if (!existing) setTimeout(() => nameEl.focus(), 300);
+  }
+
+  function openEventSheet(id) {
+    const ev = eventById(id);
+    if (!ev) return;
+    openSheet(`<div class="sheet-title">Запис</div>
+      <div class="field"><label for="f-cat">Категорія</label><select id="f-cat">${state.categories.map((c) => `<option value="${esc(c.id)}" ${c.id === ev.catId ? 'selected' : ''}>${esc(c.emoji)} ${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="f-ts">Коли</label><input type="datetime-local" id="f-ts" value="${toLocalInput(ev.ts)}" max="${toLocalInput(Date.now() + 60000)}"></div>
+      <div class="field"><label for="f-note">Нотатка (необовʼязково)</label><textarea id="f-note" maxlength="300" placeholder="Наприклад: після кави, сильний, 7/10">${esc(ev.note)}</textarea></div>
+      <div class="btn-row"><button type="button" class="btn secondary" data-act="cancel">Скасувати</button><button type="button" class="btn primary" data-act="save">Зберегти</button></div>
+      <div class="btn-row"><button type="button" class="btn ghost-danger" data-act="delete">Видалити запис</button></div>`);
+
+    sheet.querySelector('[data-act="cancel"]').addEventListener('click', closeSheet);
+    sheet.querySelector('[data-act="save"]').addEventListener('click', () => {
+      const tsEl = $('#f-ts');
+      const ts = fromLocalInput(tsEl.value);
+      if (ts === null) { tsEl.style.borderColor = 'var(--danger)'; return; }
+      ev.ts = ts; ev.catId = $('#f-cat').value; ev.note = $('#f-note').value.trim();
+      save(); renderAll(); closeSheet();
+      showToast({ text: 'Запис збережено', duration: 2500 });
+    });
+    sheet.querySelector('[data-act="delete"]').addEventListener('click', async () => {
+      closeSheet();
+      const ok = await confirmSheet({ title: 'Видалити запис?', ok: 'Видалити', danger: true });
+      if (!ok) { openEventSheet(id); return; }
+      removeEvent(id);
+      showToast({ text: 'Запис видалено', duration: 2500 });
+    });
+  }
+
+  // ---------- експорт / імпорт ----------
+  async function exportData() {
+    const payload = { app: 'symptom-tracker', version: 1, exportedAt: new Date().toISOString(), categories: state.categories, events: sortedEvents() };
+    const json = JSON.stringify(payload, null, 2);
+    const name = `samopochuttia-${new Date().toISOString().slice(0, 10)}.json`;
+    try {
+      const file = new File([json], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Резервна копія' });
+        return;
+      }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let data;
+      try { data = JSON.parse(reader.result); } catch (e) { showToast({ text: 'Файл не схожий на резервну копію' }); return; }
+      if (!data || !Array.isArray(data.categories) || !Array.isArray(data.events)) { showToast({ text: 'Файл не схожий на резервну копію' }); return; }
+      const incoming = normalize(data);
+      const ok = await confirmSheet({ title: 'Замінити дані з файлу?', text: `У файлі: ${incoming.categories.length} категорій і ${incoming.events.length} записів. Поточні дані на телефоні буде замінено.`, ok: 'Замінити', danger: true });
+      if (!ok) return;
+      state = incoming; save(); renderAll();
+      showToast({ text: 'Дані імпортовано', duration: 3000 });
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- події ----------
+  document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+  function switchTab(name) {
+    tab = name;
+    document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === `view-${name}`));
+    window.scrollTo(0, 0);
+    renderAll();
+  }
+
+  $('#grid').addEventListener('click', (e) => {
+    const add = e.target.closest('#add-cat-card');
+    if (add) { openCategorySheet(null); return; }
+    const card = e.target.closest('.card[data-id]');
+    if (card) logNow(card.dataset.id);
+  });
+  $('#today').addEventListener('click', (e) => { const r = e.target.closest('[data-event]'); if (r) openEventSheet(r.dataset.event); });
+  $('#history').addEventListener('click', (e) => { const r = e.target.closest('[data-event]'); if (r) openEventSheet(r.dataset.event); });
+  $('#chips').addEventListener('click', (e) => { const c = e.target.closest('[data-filter]'); if (c) { historyFilter = c.dataset.filter; renderHistory(); } });
+  $('#cat-list').addEventListener('click', (e) => { const r = e.target.closest('[data-cat]'); if (r) openCategorySheet(r.dataset.cat); });
+  $('#add-cat').addEventListener('click', () => openCategorySheet(null));
+  $('#export').addEventListener('click', exportData);
+  $('#import').addEventListener('click', () => $('#import-file').click());
+  $('#import-file').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) importData(f); e.target.value = ''; });
+  $('#clear').addEventListener('click', async () => {
+    const n = state.events.length;
+    if (!n) { showToast({ text: 'Записів і так немає', duration: 2500 }); return; }
+    const ok = await confirmSheet({ title: 'Видалити всі записи?', text: `${n} ${plural(n, 'запис', 'записи', 'записів')} буде видалено. Категорії залишаться.`, ok: 'Видалити все', danger: true });
+    if (!ok) return;
+    state.events = []; save(); renderAll();
+    showToast({ text: 'Усі записи видалено', duration: 3000 });
+  });
+  $('#install-hint').addEventListener('click', (e) => {
+    if (e.target.closest('#hint-close')) { try { localStorage.setItem(HINT_KEY, '1'); } catch (err) {} renderInstallHint(); }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+
+  // оновлювати «2 хв тому» без перезавантаження
+  setInterval(() => { if (modal.hidden) renderAll(); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && modal.hidden) renderAll(); });
+
+  // щоб iOS не чистив сховище без потреби
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  }
+
+  renderInstallHint();
+  renderAll();
+})();
+</script>
+</body>
+</html>
