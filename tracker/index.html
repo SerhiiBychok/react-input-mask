@@ -9,37 +9,40 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Самопочуття">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1012" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <style>
   :root {
-    --bg: #f2f2f7;
+    --bg: #f4f5f7;
     --card: #ffffff;
-    --card-2: #f7f7fa;
-    --text: #1c1c1e;
-    --muted: #6e6e73;
-    --line: rgba(60, 60, 67, 0.14);
-    --accent: #c23b9e;
-    --danger: #e5484d;
-    --toast: #2c2c2e;
-    --tab-bg: rgba(249, 249, 249, 0.92);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.05);
+    --card-2: #f1f2f4;
+    --text: #111418;
+    --muted: #6b7280;
+    --line: rgba(17, 20, 24, 0.08);
+    --accent: #111418;
+    --on-accent: #ffffff;
+    --danger: #d14343;
+    --toast: #111418;
+    --tab-bg: rgba(244, 245, 247, 0.92);
+    --shadow: 0 1px 2px rgba(17, 20, 24, 0.04), 0 6px 18px rgba(17, 20, 24, 0.05);
     --radius: 18px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #000000;
-      --card: #1c1c1e;
-      --card-2: #2c2c2e;
-      --text: #f2f2f7;
-      --muted: #98989e;
-      --line: rgba(84, 84, 88, 0.55);
-      --toast: #3a3a3c;
-      --tab-bg: rgba(22, 22, 24, 0.92);
+      --bg: #0f1012;
+      --card: #1a1b1e;
+      --card-2: #26272b;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --line: rgba(243, 244, 246, 0.1);
+      --accent: #f3f4f6;
+      --on-accent: #111418;
+      --toast: #2a2b2f;
+      --tab-bg: rgba(15, 16, 18, 0.92);
       --shadow: none;
     }
   }
@@ -81,7 +84,6 @@
     padding: 14px 14px 12px;
     background: var(--card); color: var(--text);
     border-radius: var(--radius); box-shadow: var(--shadow);
-    border-top: 4px solid var(--c, var(--accent));
     transition: transform 0.12s ease, background 0.12s ease;
     cursor: pointer;
   }
@@ -93,12 +95,18 @@
     background: color-mix(in srgb, var(--c, var(--accent)) 16%, transparent);
   }
   @supports not (background: color-mix(in srgb, red 10%, transparent)) {
-    .badge { background: var(--card-2); }
+    .badge, .card-last { background: var(--card-2); }
   }
   .card-count { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--card-2); padding: 3px 8px; border-radius: 999px; }
   .card-name { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
-  .card-last { font-size: 15px; font-weight: 500; color: var(--c, var(--accent)); margin-top: auto; }
-  .card-abs { font-size: 13px; color: var(--muted); }
+  .card-last {
+    margin-top: auto; align-self: flex-start;
+    font-size: 13px; font-weight: 600; line-height: 1.2;
+    padding: 5px 10px; border-radius: 999px;
+    color: var(--c, var(--text)); background: color-mix(in srgb, var(--c, var(--muted)) 14%, transparent);
+  }
+  .card-last.none { color: var(--muted); background: var(--card-2); }
+  .card-abs { font-size: 13px; color: var(--muted); margin-top: 4px; }
   .card-add {
     background: transparent; box-shadow: none; border: 2px dashed var(--line); border-top-width: 2px;
     align-items: center; justify-content: center; color: var(--muted); font-size: 16px; font-weight: 500;
@@ -136,11 +144,11 @@
   .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .chips::-webkit-scrollbar { display: none; }
   .chip {
-    appearance: none; border: 0; flex: none;
+    appearance: none; flex: none;
     background: var(--card); color: var(--text); font-size: 15px; font-weight: 500;
-    padding: 8px 14px; border-radius: 999px; box-shadow: var(--shadow); cursor: pointer;
+    padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); cursor: pointer;
   }
-  .chip.active { background: var(--accent); color: #fff; }
+  .chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
   .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
   .summary > div { background: var(--card); border-radius: 14px; padding: 10px 8px; text-align: center; box-shadow: var(--shadow); }
@@ -153,10 +161,12 @@
   /* ---- категорії ---- */
   .btn-block {
     appearance: none; border: 0; width: 100%; margin-top: 12px;
-    background: var(--card); color: var(--accent); font-size: 17px; font-weight: 600;
+    background: var(--card); color: var(--text); font-size: 17px; font-weight: 600;
     padding: 14px; border-radius: 14px; box-shadow: var(--shadow); cursor: pointer;
   }
   .btn-block:active { background: var(--card-2); }
+  .btn-block.primary { background: var(--accent); color: var(--on-accent); }
+  .btn-block.primary:active { opacity: 0.85; background: var(--accent); }
   .btn-block.danger { color: var(--danger); }
   .foot { color: var(--muted); font-size: 13px; margin: 10px 14px 0; }
 
@@ -202,7 +212,7 @@
     appearance: none; border: 0; flex: 1; padding: 14px; border-radius: 14px;
     font-size: 17px; font-weight: 600; cursor: pointer;
   }
-  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); }
   .btn.secondary { background: var(--card-2); color: var(--text); }
   .btn.danger { background: var(--danger); color: #fff; }
   .btn.ghost-danger { background: transparent; color: var(--danger); }
@@ -224,7 +234,7 @@
   .toast.show { transform: none; opacity: 1; pointer-events: auto; }
   .toast .t-text { flex: 1; font-size: 15px; overflow-wrap: anywhere; }
   .toast button { appearance: none; background: transparent; border: 0; color: #fff; font-weight: 600; font-size: 15px; padding: 8px; border-radius: 8px; cursor: pointer; }
-  .toast button.accent { color: #ff9ad5; }
+  .toast button.accent { color: #f4a3a3; }
 
   /* ---- підказка встановлення ---- */
   .install {
@@ -276,7 +286,7 @@
 
   <section class="view" id="view-cats">
     <div class="list" id="cat-list"></div>
-    <button class="btn-block" id="add-cat">＋ Додати категорію</button>
+    <button class="btn-block primary" id="add-cat">＋ Додати категорію</button>
 
     <h2 class="section-title">Дані</h2>
     <button class="btn-block" id="export" style="margin-top:0">Експортувати (резервна копія)</button>
@@ -318,12 +328,14 @@
   const DAY = 86400000;
 
   const DEFAULT_CATEGORIES = [
-    { id: 'headache',   name: 'Головний біль', emoji: '🤕', color: '#e5484d' },
-    { id: 'knee-left',  name: 'Коліно ліве',   emoji: '🦵', color: '#f76b15' },
-    { id: 'knee-right', name: 'Коліно праве',  emoji: '🦵', color: '#ffb224' },
-    { id: 'sugar',      name: 'Цукор',         emoji: '🍬', color: '#8e4ec6' },
+    { id: 'headache',   name: 'Головний біль', emoji: '🤕', color: '#d14343' },
+    { id: 'knee-left',  name: 'Коліно ліве',   emoji: '🦵', color: '#dd7a2a' },
+    { id: 'knee-right', name: 'Коліно праве',  emoji: '🦵', color: '#c9951c' },
+    { id: 'sugar',      name: 'Цукор',         emoji: '🍬', color: '#8a4fc7' },
   ];
-  const COLORS = ['#e5484d', '#f76b15', '#ffb224', '#30a46c', '#12a594', '#0090ff', '#6e56cf', '#8e4ec6', '#d6409f', '#8d8d8d'];
+  const COLORS = ['#d14343', '#dd7a2a', '#c9951c', '#2f9e63', '#1f9e8a', '#2f6fd0', '#5b5bd6', '#8a4fc7', '#c74d9a', '#6b7280'];
+  // кольори попередньої палітри (вже збережені на пристрої) переводимо в нову
+  const COLOR_MIGRATION = { '#e5484d': '#d14343', '#f76b15': '#dd7a2a', '#ffb224': '#c9951c', '#30a46c': '#2f9e63', '#12a594': '#1f9e8a', '#0090ff': '#2f6fd0', '#6e56cf': '#5b5bd6', '#8e4ec6': '#8a4fc7', '#d6409f': '#c74d9a', '#8d8d8d': '#6b7280' };
   const EMOJI = ['🤕', '🦵', '🍬', '🤒', '🤧', '😴', '🤢', '😣', '🦷', '👁️', '👂', '🫀', '🫁', '🧠', '🩹', '💊', '🌡️', '💧', '☕', '🍺', '🍷', '🚬', '🍫', '🍕', '🥤', '🏃', '🚶', '🏋️', '🧘', '💤', '😤', '🤯', '🥴', '⚡', '❤️', '🦶', '🤲', '🧴', '🍽️', '📌'];
 
   const MONTHS_GEN  = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
@@ -390,7 +402,7 @@
   function normalize(data) {
     const cats = (data.categories || [])
       .filter((c) => c && c.id && c.name)
-      .map((c) => ({ id: String(c.id), name: String(c.name).slice(0, 40), emoji: c.emoji ? String(c.emoji).slice(0, 12) : '•', color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : COLORS[0] }));
+      .map((c) => ({ id: String(c.id), name: String(c.name).slice(0, 40), emoji: c.emoji ? String(c.emoji).slice(0, 12) : '•', color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? (COLOR_MIGRATION[c.color.toLowerCase()] || c.color) : COLORS[0] }));
     const ids = new Set(cats.map((c) => c.id));
     const events = (data.events || [])
       .filter((e) => e && e.id && ids.has(e.catId) && Number.isFinite(e.ts))
@@ -459,7 +471,7 @@
       return `<button class="card" data-id="${esc(cat.id)}" style="--c:${esc(cat.color)}" aria-label="Записати: ${esc(cat.name)}">
         <span class="card-top"><span class="badge">${esc(cat.emoji)}</span>${week ? `<span class="card-count">${week} за 7 дн.</span>` : ''}</span>
         <span class="card-name">${esc(cat.name)}</span>
-        <span class="card-last">${last ? esc(relLabel(last.ts, now)) : 'ще не було'}</span>
+        <span class="card-last${last ? '' : ' none'}">${last ? esc(relLabel(last.ts, now)) : 'ще не було'}</span>
         <span class="card-abs">${last ? esc(whenLabel(last.ts, now)) : 'торкніться, щоб записати'}</span>
       </button>`;
     });
